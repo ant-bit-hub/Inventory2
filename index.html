@@ -523,10 +523,10 @@ const DEFAULT_PW   = 'waves2024';
 
 // ══════════════════════════════════════════════════════
 //  GOOGLE DRIVE CONFIG
-//  157781229585-s53nji7ge1nn5qgot6p4kpa5ml0nrs1m.apps.googleusercontent.com
+//  Replace YOUR_CLIENT_ID_HERE with your OAuth Client ID
 //  from console.cloud.google.com
 // ══════════════════════════════════════════════════════
-const GOOGLE_CLIENT_ID = '157781229585-s53nji7ge1nn5qgot6p4kpa5ml0nrs1m= .apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '157781229585-s53nji7ge1nn5qgot6p4kpa5ml0nrs1m.apps.googleusercontent.com';
 const DRIVE_FILE_NAME  = 'waves-inventory-data.json';
 const DRIVE_SCOPE      = 'https://www.googleapis.com/auth/drive.appdata';
 
@@ -1519,14 +1519,8 @@ function checkSession(){
     document.getElementById('fab').style.display='flex';
     // Init Google Drive — it will call initApp() after loading data
     // If Drive fails or Client ID not set, falls back to localStorage
-if(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com'){
-      // Wait for Google API scripts to fully load before init
-      const waitForGapi = setInterval(()=>{
-        if(window.gapi && window.google && window.google.accounts){
-          clearInterval(waitForGapi);
-          initGoogleDrive();
-        }
-      }, 200);
+    if(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com'){
+      initGoogleDrive();
     } else {
       // No Client ID set yet — just use localStorage
       showSyncBadge('⚠️ Add your Google Client ID to enable Drive sync','var(--amber)');
