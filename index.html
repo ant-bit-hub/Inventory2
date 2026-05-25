@@ -7,8 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://apis.google.com/js/api.js"></script>
-<script src="https://accounts.google.com/gsi/client"></script>
 <style>
 :root{
   --bg:#f5f4f0;--surface:#fff;--surface2:#f0efe9;
@@ -58,10 +56,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .signout-btn{padding:5px 12px;background:none;border:1px solid var(--border-md);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-muted);cursor:pointer;transition:all .15s}
 .signout-btn:hover{background:var(--red-bg);border-color:var(--red);color:var(--red)}
-.sync-badge{font-size:11px;color:var(--text-muted);opacity:.4;transition:opacity .3s,color .3s;white-space:nowrap}
-.drive-btn{padding:5px 12px;background:none;border:1px solid var(--border-md);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-muted);cursor:pointer;transition:all .15s}
-.drive-btn:hover{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
-.drive-btn.connected{border-color:var(--green);color:var(--green);background:var(--green-bg)}
 
 .main{max-width:1140px;margin:0 auto;padding:1.75rem 1.5rem 6rem}
 .page{display:none}.page.active{display:block}
@@ -295,8 +289,7 @@ a:hover{text-decoration:underline}
     <button class="topbar-tab"         onclick="switchTab('team')">👥 Team</button>
   </div>
   <div class="topbar-right">
-    <span class="sync-badge" id="sync-badge">☁️ Drive</span>
-    <button class="drive-btn" id="drive-btn" onclick="signInDrive()">☁️ Connect Drive</button>
+    <span id="sync-badge" style="font-size:11px;color:var(--text-muted);opacity:.4;transition:opacity .3s,color .3s;white-space:nowrap">☁️ Cloud</span>
     <button class="signout-btn" onclick="doSignOut()">🔒 Lock</button>
   </div>
 </div>
@@ -522,132 +515,78 @@ const KEY_TEAM     = 'waves_team';
 const DEFAULT_PW   = 'waves2024';
 
 // ══════════════════════════════════════════════════════
-//  GOOGLE DRIVE CONFIG
+//  GOOGLE APPS SCRIPT SYNC
 // ══════════════════════════════════════════════════════
-const GOOGLE_CLIENT_ID = '157781229585-s53nji7ge1nn5qgot6p4kpa5ml0nrs1m.apps.googleusercontent.com';
-const DRIVE_FILE_NAME  = 'waves-inventory-data.json';
-const DRIVE_SCOPE      = 'https://www.googleapis.com/auth/drive.appdata';
-
-let driveFileId = null;
-let tokenClient = null;
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrWPfKGVGJMvZyNRPMeU32Yo_EYZZoAnYOUWh0f89vhDzC7FCG53cmpOsVe0tUwuJYCg/exec';
 let syncTimeout = null;
-let driveReady  = false;
-
-function initGoogleDrive(){
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CLIENT_ID,
-    scope:     DRIVE_SCOPE,
-    callback:  async(resp)=>{
-      if(resp.error){ showSyncBadge('⚠️ Drive sign-in failed','var(--red)'); return; }
-      driveReady = true;
-      document.getElementById('drive-btn').textContent = '☁️ Drive connected';
-      document.getElementById('drive-btn').classList.add('connected');
-      await loadFromDrive();
-    },
-  });
-  gapi.load('client', async()=>{
-    await gapi.client.init({});
-    await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
-    tokenClient.requestAccessToken({prompt:''});
-  });
-}
-
-function signInDrive(){
-  if(!tokenClient){ showSyncBadge('⚠️ Drive not ready yet','var(--amber)'); return; }
-  tokenClient.requestAccessToken({prompt:'consent'});
-}
-
-function saveToDrive(){
-  if(!driveReady) return;
-  clearTimeout(syncTimeout);
-  showSyncBadge('💾 Saving…','var(--text-muted)');
-  syncTimeout = setTimeout(async()=>{
-    const payload = JSON.stringify({
-      version:2, savedAt:new Date().toISOString(),
-      products, categories, reportYears, teamMembers,
-      quarterlyData: getQuarterlyData(),
-    });
-    const boundary = '-------waves_boundary';
-    const metadata = JSON.stringify({name:DRIVE_FILE_NAME, parents:['appDataFolder']});
-    const body =
-      `--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n` +
-      `--${boundary}\r\nContent-Type: application/json\r\n\r\n${payload}\r\n` +
-      `--${boundary}--`;
-    try{
-      if(driveFileId){
-        await gapi.client.request({
-          path:`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}`,
-          method:'PATCH', params:{uploadType:'multipart'},
-          headers:{'Content-Type':`multipart/related; boundary="${boundary}"`}, body,
-        });
-      } else {
-        const res = await gapi.client.request({
-          path:'https://www.googleapis.com/upload/drive/v3/files',
-          method:'POST', params:{uploadType:'multipart'},
-          headers:{'Content-Type':`multipart/related; boundary="${boundary}"`}, body,
-        });
-        driveFileId = res.result.id;
-      }
-      showSyncBadge('✓ Saved to Drive','var(--green)');
-    } catch(e){
-      console.error('Drive save failed',e);
-      showSyncBadge('⚠️ Save failed','var(--red)');
-    }
-  }, 2000);
-}
-
-async function loadFromDrive(){
-  try{
-    showSyncBadge('⏳ Loading from Drive…','var(--text-muted)');
-    const list = await gapi.client.drive.files.list({
-      spaces:'appDataFolder', fields:'files(id,name)',
-      q:`name='${DRIVE_FILE_NAME}'`,
-    });
-    const files = list.result.files;
-    if(!files || files.length === 0){
-      showSyncBadge('☁️ Connected — saving local data to Drive','var(--accent)');
-      saveToDrive(); initApp(); return;
-    }
-    driveFileId = files[0].id;
-    const res = await gapi.client.drive.files.get({fileId:driveFileId, alt:'media'});
-    const data = typeof res.result === 'string' ? JSON.parse(res.result) : res.result;
-    products    = data.products    || [];
-    categories  = data.categories  || [];
-    reportYears = data.reportYears || [2026,2027];
-    teamMembers = data.teamMembers || [];
-    if(data.quarterlyData){
-      Object.entries(data.quarterlyData).forEach(([key,val])=>{
-        localStorage.setItem(key, JSON.stringify(val));
-      });
-    }
-    save(KEY_PRODUCTS,products); save(KEY_CATS,categories);
-    save(KEY_YEARS,reportYears); save(KEY_TEAM,teamMembers);
-    showSyncBadge('✓ Loaded from Drive','var(--green)');
-    initApp();
-  } catch(e){
-    console.error('Drive load failed',e);
-    showSyncBadge('⚠️ Drive error — using local data','var(--amber)');
-    initApp();
-  }
-}
 
 function getQuarterlyData(){
-  const out = {};
+  const out={};
   (reportYears||[]).forEach(y=>{
     ['Q1','Q2','Q3','Q4'].forEach(q=>{
-      const key = KEY_QDATA(y,q), val = localStorage.getItem(key);
-      if(val) out[key] = JSON.parse(val);
+      const key=KEY_QDATA(y,q),val=localStorage.getItem(key);
+      if(val) out[key]=JSON.parse(val);
     });
   });
   return out;
 }
 
-function showSyncBadge(msg, color){
-  const b = document.getElementById('sync-badge');
+function showSyncBadge(msg,color){
+  let b=document.getElementById('sync-badge');
   if(!b) return;
-  b.textContent = msg; b.style.color = color; b.style.opacity = '1';
+  b.textContent=msg; b.style.color=color; b.style.opacity='1';
   clearTimeout(b._t);
-  b._t = setTimeout(()=>{ b.style.opacity='.4'; b.style.color=''; }, 3500);
+  b._t=setTimeout(()=>{ b.style.opacity='.4'; b.style.color=''; },3500);
+}
+
+function saveToCloud(){
+  clearTimeout(syncTimeout);
+  syncTimeout=setTimeout(async()=>{
+    showSyncBadge('💾 Saving…','var(--text-muted)');
+    const payload=JSON.stringify({
+      version:2, savedAt:new Date().toISOString(),
+      products, categories, reportYears, teamMembers,
+      quarterlyData:getQuarterlyData(),
+    });
+    try{
+      await fetch(SCRIPT_URL,{
+        method:'POST',
+        body:payload,
+      });
+      showSyncBadge('✓ Saved to cloud','var(--green)');
+    } catch(e){
+      console.error('Cloud save failed',e);
+      showSyncBadge('⚠️ Save failed','var(--red)');
+    }
+  },2000);
+}
+
+async function loadFromCloud(){
+  showSyncBadge('⏳ Loading…','var(--text-muted)');
+  try{
+    const res=await fetch(SCRIPT_URL+'?t='+Date.now());
+    const data=await res.json();
+    if(data && data.products){
+      products    =data.products    ||[];
+      categories  =data.categories  ||[];
+      reportYears =data.reportYears ||[2026,2027];
+      teamMembers =data.teamMembers ||[];
+      if(data.quarterlyData){
+        Object.entries(data.quarterlyData).forEach(([key,val])=>{
+          localStorage.setItem(key,JSON.stringify(val));
+        });
+      }
+      save(KEY_PRODUCTS,products); save(KEY_CATS,categories);
+      save(KEY_YEARS,reportYears); save(KEY_TEAM,teamMembers);
+      showSyncBadge('✓ Loaded from cloud','var(--green)');
+    } else {
+      showSyncBadge('☁️ No cloud data yet','var(--text-muted)');
+    }
+  } catch(e){
+    console.error('Cloud load failed',e);
+    showSyncBadge('⚠️ Using local data','var(--amber)');
+  }
+  initApp();
 }
 
 let products    = JSON.parse(localStorage.getItem(KEY_PRODUCTS) || '[]');
@@ -673,10 +612,10 @@ let selectedCats = [];
 const TABS = ['dashboard','reorder','inventory','overhead','reports','team'];
 
 function save(key,val){ localStorage.setItem(key,JSON.stringify(val)); }
-function saveProducts()  { save(KEY_PRODUCTS,products);  saveToDrive(); }
-function saveCategories(){ save(KEY_CATS,categories);     saveToDrive(); }
-function saveYears()     { save(KEY_YEARS,reportYears);   saveToDrive(); }
-function saveTeam()      { save(KEY_TEAM,teamMembers);    saveToDrive(); }
+function saveProducts()  { save(KEY_PRODUCTS,products);  saveToCloud(); }
+function saveCategories(){ save(KEY_CATS,categories);     saveToCloud(); }
+function saveYears()     { save(KEY_YEARS,reportYears);   saveToCloud(); }
+function saveTeam()      { save(KEY_TEAM,teamMembers);    saveToCloud(); }
 
 document.getElementById('topbar-date') && (document.getElementById('topbar-date').textContent =
   new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}));
@@ -695,7 +634,7 @@ function doLogin(){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('fab').style.display='flex';
-    initApp();
+    loadFromCloud(); // loads latest data then calls initApp()
   } else {
     errEl.classList.add('show');
     document.getElementById('login-pw').value='';
@@ -1435,7 +1374,7 @@ function renderReports(){
       </div>`).join('')}
     </div>`;
   }
-  window.saveQEntry=function(pid,q,val){const d=getQData(activeYear,q);d[pid]=parseInt(val)||0;saveQData(activeYear,q,d);saveToDrive();renderReports();};
+  window.saveQEntry=function(pid,q,val){const d=getQData(activeYear,q);d[pid]=parseInt(val)||0;saveQData(activeYear,q,d);saveToCloud();renderReports();};
   window.openQEditor=openQEditor;
   document.getElementById('qedit-quarter').onchange=openQEditor;
   openQEditor();
@@ -1512,12 +1451,7 @@ function checkSession(){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('fab').style.display='flex';
-    const waitForGapi = setInterval(()=>{
-      if(window.gapi && window.google && window.google.accounts){
-        clearInterval(waitForGapi);
-        initGoogleDrive();
-      }
-    }, 200);
+    loadFromCloud(); // loads latest data then calls initApp()
   }
 }
 checkSession();
