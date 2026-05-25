@@ -523,17 +523,15 @@ const DEFAULT_PW   = 'waves2024';
 
 // ══════════════════════════════════════════════════════
 //  GOOGLE DRIVE CONFIG
-//  157781229585-s53nji7ge1nn5qgot6p4kpa5ml0nrs1m.apps.googleusercontent.com
-//  from console.cloud.google.com
 // ══════════════════════════════════════════════════════
 const GOOGLE_CLIENT_ID = '157781229585-s53nji7ge1nn5qgot6p4kpa5ml0nrs1m.apps.googleusercontent.com';
 const DRIVE_FILE_NAME  = 'waves-inventory-data.json';
 const DRIVE_SCOPE      = 'https://www.googleapis.com/auth/drive.appdata';
 
-let driveFileId  = null;
-let tokenClient  = null;
-let syncTimeout  = null;
-let driveReady   = false;
+let driveFileId = null;
+let tokenClient = null;
+let syncTimeout = null;
+let driveReady  = false;
 
 function initGoogleDrive(){
   tokenClient = google.accounts.oauth2.initTokenClient({
@@ -541,22 +539,21 @@ function initGoogleDrive(){
     scope:     DRIVE_SCOPE,
     callback:  async(resp)=>{
       if(resp.error){ showSyncBadge('⚠️ Drive sign-in failed','var(--red)'); return; }
-      driveReady=true;
-      document.getElementById('drive-btn').textContent='☁️ Drive connected';
+      driveReady = true;
+      document.getElementById('drive-btn').textContent = '☁️ Drive connected';
       document.getElementById('drive-btn').classList.add('connected');
       await loadFromDrive();
     },
   });
-  gapi.load('client',async()=>{
+  gapi.load('client', async()=>{
     await gapi.client.init({});
     await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
-    // Try silent sign-in first (no popup)
     tokenClient.requestAccessToken({prompt:''});
   });
 }
 
 function signInDrive(){
-  if(!tokenClient){ showSyncBadge('⚠️ Drive not ready','var(--amber)'); return; }
+  if(!tokenClient){ showSyncBadge('⚠️ Drive not ready yet','var(--amber)'); return; }
   tokenClient.requestAccessToken({prompt:'consent'});
 }
 
@@ -564,68 +561,65 @@ function saveToDrive(){
   if(!driveReady) return;
   clearTimeout(syncTimeout);
   showSyncBadge('💾 Saving…','var(--text-muted)');
-  syncTimeout=setTimeout(async()=>{
-    const payload=JSON.stringify({
+  syncTimeout = setTimeout(async()=>{
+    const payload = JSON.stringify({
       version:2, savedAt:new Date().toISOString(),
       products, categories, reportYears, teamMembers,
-      quarterlyData:getQuarterlyData(),
+      quarterlyData: getQuarterlyData(),
     });
-    const boundary='-------waves_boundary';
-    const metadata=JSON.stringify({name:DRIVE_FILE_NAME,parents:['appDataFolder']});
-    const body=
-      `--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n`+
-      `--${boundary}\r\nContent-Type: application/json\r\n\r\n${payload}\r\n`+
+    const boundary = '-------waves_boundary';
+    const metadata = JSON.stringify({name:DRIVE_FILE_NAME, parents:['appDataFolder']});
+    const body =
+      `--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n` +
+      `--${boundary}\r\nContent-Type: application/json\r\n\r\n${payload}\r\n` +
       `--${boundary}--`;
     try{
       if(driveFileId){
         await gapi.client.request({
           path:`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}`,
-          method:'PATCH',params:{uploadType:'multipart'},
-          headers:{'Content-Type':`multipart/related; boundary="${boundary}"`},body,
+          method:'PATCH', params:{uploadType:'multipart'},
+          headers:{'Content-Type':`multipart/related; boundary="${boundary}"`}, body,
         });
       } else {
-        const res=await gapi.client.request({
+        const res = await gapi.client.request({
           path:'https://www.googleapis.com/upload/drive/v3/files',
-          method:'POST',params:{uploadType:'multipart'},
-          headers:{'Content-Type':`multipart/related; boundary="${boundary}"`},body,
+          method:'POST', params:{uploadType:'multipart'},
+          headers:{'Content-Type':`multipart/related; boundary="${boundary}"`}, body,
         });
-        driveFileId=res.result.id;
+        driveFileId = res.result.id;
       }
       showSyncBadge('✓ Saved to Drive','var(--green)');
     } catch(e){
       console.error('Drive save failed',e);
-      showSyncBadge('⚠️ Save failed — check connection','var(--red)');
+      showSyncBadge('⚠️ Save failed','var(--red)');
     }
-  },2000);
+  }, 2000);
 }
 
 async function loadFromDrive(){
   try{
     showSyncBadge('⏳ Loading from Drive…','var(--text-muted)');
-    const list=await gapi.client.drive.files.list({
-      spaces:'appDataFolder',fields:'files(id,name)',
+    const list = await gapi.client.drive.files.list({
+      spaces:'appDataFolder', fields:'files(id,name)',
       q:`name='${DRIVE_FILE_NAME}'`,
     });
-    const files=list.result.files;
-    if(!files||files.length===0){
-      showSyncBadge('☁️ Connected — no data yet, saving local…','var(--accent)');
-      saveToDrive();
-      initApp();
-      return;
+    const files = list.result.files;
+    if(!files || files.length === 0){
+      showSyncBadge('☁️ Connected — saving local data to Drive','var(--accent)');
+      saveToDrive(); initApp(); return;
     }
-    driveFileId=files[0].id;
-    const res=await gapi.client.drive.files.get({fileId:driveFileId,alt:'media'});
-    const data=typeof res.result==='string'?JSON.parse(res.result):res.result;
-    products    =data.products    ||[];
-    categories  =data.categories  ||[];
-    reportYears =data.reportYears ||[2026,2027];
-    teamMembers =data.teamMembers ||[];
+    driveFileId = files[0].id;
+    const res = await gapi.client.drive.files.get({fileId:driveFileId, alt:'media'});
+    const data = typeof res.result === 'string' ? JSON.parse(res.result) : res.result;
+    products    = data.products    || [];
+    categories  = data.categories  || [];
+    reportYears = data.reportYears || [2026,2027];
+    teamMembers = data.teamMembers || [];
     if(data.quarterlyData){
       Object.entries(data.quarterlyData).forEach(([key,val])=>{
-        localStorage.setItem(key,JSON.stringify(val));
+        localStorage.setItem(key, JSON.stringify(val));
       });
     }
-    // Keep localStorage in sync as offline fallback
     save(KEY_PRODUCTS,products); save(KEY_CATS,categories);
     save(KEY_YEARS,reportYears); save(KEY_TEAM,teamMembers);
     showSyncBadge('✓ Loaded from Drive','var(--green)');
@@ -638,21 +632,22 @@ async function loadFromDrive(){
 }
 
 function getQuarterlyData(){
-  const out={};
+  const out = {};
   (reportYears||[]).forEach(y=>{
     ['Q1','Q2','Q3','Q4'].forEach(q=>{
-      const key=KEY_QDATA(y,q),val=localStorage.getItem(key);
-      if(val) out[key]=JSON.parse(val);
+      const key = KEY_QDATA(y,q), val = localStorage.getItem(key);
+      if(val) out[key] = JSON.parse(val);
     });
   });
   return out;
 }
 
-function showSyncBadge(msg,color){
-  const b=document.getElementById('sync-badge');
+function showSyncBadge(msg, color){
+  const b = document.getElementById('sync-badge');
   if(!b) return;
-  b.textContent=msg; b.style.color=color; b.style.opacity='1';
-  clearTimeout(b._t); b._t=setTimeout(()=>{ b.style.opacity='.4'; b.style.color=''; },3500);
+  b.textContent = msg; b.style.color = color; b.style.opacity = '1';
+  clearTimeout(b._t);
+  b._t = setTimeout(()=>{ b.style.opacity='.4'; b.style.color=''; }, 3500);
 }
 
 let products    = JSON.parse(localStorage.getItem(KEY_PRODUCTS) || '[]');
@@ -1517,17 +1512,12 @@ function checkSession(){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('fab').style.display='flex';
-    if(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== 'const GOOGLE_CLIENT_ID = '157781229585-s53nji7ge1nn5qgot6p4kpa5ml0nrs1m.apps.googleusercontent.com';.apps.googleusercontent.com'){
-      const waitForGapi = setInterval(()=>{
-        if(window.gapi && window.google && window.google.accounts){
-          clearInterval(waitForGapi);
-          initGoogleDrive();
-        }
-      }, 200);
-    } else {
-      showSyncBadge('⚠️ Add your Google Client ID to enable Drive sync','var(--amber)');
-      initApp();
-    }
+    const waitForGapi = setInterval(()=>{
+      if(window.gapi && window.google && window.google.accounts){
+        clearInterval(waitForGapi);
+        initGoogleDrive();
+      }
+    }, 200);
   }
 }
 checkSession();
