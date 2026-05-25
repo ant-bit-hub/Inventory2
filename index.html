@@ -1517,10 +1517,7 @@ function checkSession(){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('fab').style.display='flex';
-    // Init Google Drive — it will call initApp() after loading data
-    // If Drive fails or Client ID not set, falls back to localStorage
-    if(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== '608558647009 aelkv41cu4euhdj2ffdshtqgrcansf5i.apps.googleusercontent.com.apps.googleusercontent.com'){
-      // Wait for Google API scripts to fully load before init
+    if(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== 'const GOOGLE_CLIENT_ID = '157781229585-s53nji7ge1nn5qgot6p4kpa5ml0nrs1m.apps.googleusercontent.com'){
       const waitForGapi = setInterval(()=>{
         if(window.gapi && window.google && window.google.accounts){
           clearInterval(waitForGapi);
@@ -1528,7 +1525,6 @@ function checkSession(){
         }
       }, 200);
     } else {
-      // No Client ID set yet — just use localStorage
       showSyncBadge('⚠️ Add your Google Client ID to enable Drive sync','var(--amber)');
       initApp();
     }
