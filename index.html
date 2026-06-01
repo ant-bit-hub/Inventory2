@@ -852,7 +852,8 @@ function doChangePwFromApp(){
 
 // Check if already logged in on page load
 function checkSession(){
-  if(localStorage.getItem(KEY_SESSION)==='active'){
+  localStorage.removeItem(KEY_SESSION);
+  if(sessionStorage.getItem(KEY_SESSION)==='active'){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('fab').style.display='flex';
@@ -1631,6 +1632,8 @@ function renderDashboard(){
 //  INIT
 // ══════════════════════════════════════════════════════
 function checkSession(){
+  // Always clear localStorage session — force password on every new tab/visit
+  localStorage.removeItem(KEY_SESSION);
   if(sessionStorage.getItem(KEY_SESSION)==='active'){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
