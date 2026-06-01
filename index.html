@@ -761,7 +761,7 @@ window.addEventListener('scroll', ()=>{
     // Also close more menu if open
     if(moreMenu) moreMenu.style.display='none';
     if(moreOverlay) moreOverlay.style.display='none';
-  } else {
+  } else if(current < lastScroll) {
     // Scrolling up — show nav and fab
     nav.style.transform = 'translateY(0)';
     nav.style.transition = 'transform .25s ease';
@@ -769,11 +769,6 @@ window.addEventListener('scroll', ()=>{
     if(fab && isMobile()) fab.style.transform = 'translateY(0)';
   }
   lastScroll = current <= 0 ? 0 : current;
-  // Always show nav when near bottom of page
-  clearTimeout(scrollTimer);
-  scrollTimer = setTimeout(()=>{
-    if(nav) nav.style.transform = 'translateY(0)';
-  }, 1500);
 }, {passive:true});
 
 function save(key,val){ localStorage.setItem(key,JSON.stringify(val)); }
