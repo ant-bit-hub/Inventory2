@@ -747,6 +747,8 @@ window.addEventListener('resize', showMobileNav);
 let lastScroll = 0;
 let scrollTimer = null;
 window.addEventListener('scroll', ()=>{
+  // Don't touch nav when form is open
+  if(formOpen) return;
   const current = window.scrollY;
   const nav = document.getElementById('mobile-nav');
   const moreMenu = document.getElementById('mobile-more-menu');
