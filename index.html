@@ -171,7 +171,7 @@ tr:hover td{background:var(--surface2)}
 .btn-sell:disabled{background:var(--surface2);border-color:var(--border-md);color:var(--text-muted);cursor:not-allowed;transform:none}
 .form-error{color:var(--red);font-size:12px;margin-top:8px}
 
-.fab{position:fixed;bottom:2rem;right:2rem;width:52px;height:52px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(42,92,255,.45);z-index:200;transition:all .2s;color:#fff;font-size:26px;line-height:1}
+.fab{position:fixed;bottom:2rem;right:2rem;width:52px;height:52px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(42,92,255,.45);z-index:200;transition:all .2s, transform .25s ease;color:#fff;font-size:26px;line-height:1}
 .fab:hover{transform:scale(1.08)}
 .fab.open{background:var(--text-muted);transform:rotate(45deg)}
 .fab-label{position:fixed;bottom:2.3rem;right:5.2rem;background:var(--text);color:#fff;font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;pointer-events:none;opacity:0;transition:opacity .15s;white-space:nowrap}
@@ -259,6 +259,7 @@ a:hover{text-decoration:underline}
     z-index:200;
     height:62px;
     padding-bottom:env(safe-area-inset-bottom);
+    transition:transform .25s ease;
   }
   .mobile-nav-btn{
     flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -741,6 +742,39 @@ function toggleMobileMore(){
 }
 
 window.addEventListener('resize', showMobileNav);
+
+// Hide nav on scroll down, show on scroll up
+let lastScroll = 0;
+let scrollTimer = null;
+window.addEventListener('scroll', ()=>{
+  const current = window.scrollY;
+  const nav = document.getElementById('mobile-nav');
+  const moreMenu = document.getElementById('mobile-more-menu');
+  const moreOverlay = document.getElementById('mobile-more-overlay');
+  if(!nav || !isMobile()) return;
+  if(current > lastScroll && current > 60){
+    // Scrolling down — hide nav and fab
+    nav.style.transform = 'translateY(100%)';
+    nav.style.transition = 'transform .25s ease';
+    const fab = document.getElementById('fab');
+    if(fab && isMobile()) fab.style.transform = 'translateY(120px)';
+    // Also close more menu if open
+    if(moreMenu) moreMenu.style.display='none';
+    if(moreOverlay) moreOverlay.style.display='none';
+  } else {
+    // Scrolling up — show nav and fab
+    nav.style.transform = 'translateY(0)';
+    nav.style.transition = 'transform .25s ease';
+    const fab = document.getElementById('fab');
+    if(fab && isMobile()) fab.style.transform = 'translateY(0)';
+  }
+  lastScroll = current <= 0 ? 0 : current;
+  // Always show nav when near bottom of page
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(()=>{
+    if(nav) nav.style.transform = 'translateY(0)';
+  }, 1500);
+}, {passive:true});
 
 function save(key,val){ localStorage.setItem(key,JSON.stringify(val)); }
 function saveProducts()  { save(KEY_PRODUCTS,products);  saveToCloud(); }
