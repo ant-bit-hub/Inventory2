@@ -240,6 +240,90 @@ a:hover{text-decoration:underline}
   .form-grid-3{grid-template-columns:1fr}
   .metrics{grid-template-columns:1fr 1fr}
 }
+
+/* ── MOBILE NAV ── */
+@media(max-width:768px){
+  /* Hide top tabs on mobile */
+  .topbar-tabs{ display:none }
+  .topbar{ height:52px; padding:0 1rem }
+  .topbar-brand{ font-size:14px }
+  #sync-badge{ font-size:10px; max-width:80px; overflow:hidden; text-overflow:ellipsis }
+
+  /* Bottom nav bar */
+  .mobile-nav{
+    display:flex;
+    position:fixed;
+    bottom:0;left:0;right:0;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+    z-index:200;
+    height:62px;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .mobile-nav-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;border:none;background:none;cursor:pointer;
+    font-family:'DM Sans',sans-serif;font-size:10px;font-weight:500;
+    color:var(--text-muted);transition:all .15s;padding:6px 2px;
+    position:relative;
+  }
+  .mobile-nav-btn .nav-icon{ font-size:20px;line-height:1 }
+  .mobile-nav-btn.active{ color:var(--accent) }
+  .mobile-nav-btn.active .nav-icon{ transform:scale(1.1) }
+  .mobile-nav-badge{
+    position:absolute;top:4px;right:calc(50% - 16px);
+    background:var(--red);color:#fff;
+    border-radius:9px;font-size:9px;font-weight:700;
+    min-width:16px;height:16px;padding:0 4px;
+    display:none;align-items:center;justify-content:center;
+  }
+  .mobile-nav-badge.show{ display:flex }
+
+  /* More padding at bottom so content clears nav */
+  .main{ padding:1rem 1rem 80px }
+
+  /* FAB sits above nav */
+  .fab{ bottom:74px; right:1rem; width:48px; height:48px; font-size:22px }
+  .fab-label{ display:none }
+
+  /* Bigger tap targets on table buttons */
+  .btn-sell{ padding:8px 12px; font-size:13px }
+  .btn-edit-row,.btn-del{ padding:7px 10px; font-size:12px }
+  .btn-sm,.btn-sm-accent{ padding:8px 14px; font-size:12px }
+
+  /* Stack metrics 2 col */
+  .metrics{ grid-template-columns:1fr 1fr; gap:8px }
+  .metric{ padding:.75rem 1rem }
+  .metric-value{ font-size:20px }
+
+  /* Full width cards */
+  .card{ border-radius:10px; padding:1rem }
+
+  /* Table horizontal scroll with bigger text */
+  table{ font-size:12px }
+  th{ font-size:10px; padding:6px 8px }
+  td{ padding:8px 8px }
+
+  /* Reorder cards full width */
+  .reorder-grid{ grid-template-columns:1fr }
+
+  /* Form panel full screen on mobile */
+  .form-panel{ border-radius:16px 16px 0 0; max-height:95vh }
+  .form-grid{ grid-template-columns:1fr }
+  .form-grid-3{ grid-template-columns:1fr 1fr }
+
+  /* Quarter grid 2 col */
+  .quarter-grid{ grid-template-columns:1fr 1fr }
+
+  /* Login card padding */
+  .login-card{ padding:2rem 1.25rem; margin:1rem }
+}
+
+@media(max-width:380px){
+  .metrics{ grid-template-columns:1fr }
+  .form-grid-3{ grid-template-columns:1fr }
+  .quarter-grid{ grid-template-columns:1fr 1fr }
+}
 </style>
 </head>
 <body>
@@ -427,6 +511,35 @@ a:hover{text-decoration:underline}
 </div>
 
 </div><!-- /main -->
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" id="mobile-nav" style="display:none">
+  <button class="mobile-nav-btn active" id="mnav-dashboard" onclick="switchTab('dashboard')">
+    <span class="nav-icon">📊</span>Dashboard
+  </button>
+  <button class="mobile-nav-btn" id="mnav-reorder" onclick="switchTab('reorder')">
+    <span class="nav-icon">📋</span>Reorder
+    <span class="mobile-nav-badge" id="mobile-reorder-badge"></span>
+  </button>
+  <button class="mobile-nav-btn" id="mnav-inventory" onclick="switchTab('inventory')">
+    <span class="nav-icon">📦</span>Inventory
+  </button>
+  <button class="mobile-nav-btn" id="mnav-overhead" onclick="switchTab('overhead')">
+    <span class="nav-icon">💰</span>Overhead
+  </button>
+  <button class="mobile-nav-btn" id="mnav-more" onclick="toggleMobileMore()">
+    <span class="nav-icon">••••</span>More
+  </button>
+</nav>
+
+<!-- MOBILE MORE MENU -->
+<div id="mobile-more-menu" style="display:none;position:fixed;bottom:62px;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:199;padding:.75rem 1rem">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <button class="btn-secondary" style="text-align:center;padding:12px" onclick="switchTab('reports');toggleMobileMore()">📈 Reports</button>
+    <button class="btn-secondary" style="text-align:center;padding:12px" onclick="switchTab('team');toggleMobileMore()">👥 Team</button>
+  </div>
+</div>
+<div id="mobile-more-overlay" style="display:none;position:fixed;inset:0;z-index:198" onclick="toggleMobileMore()"></div>
 </div><!-- /app -->
 
 <!-- FAB -->
@@ -611,6 +724,24 @@ let selectedCats = [];
 
 const TABS = ['dashboard','reorder','inventory','overhead','reports','team'];
 
+function isMobile(){ return window.innerWidth <= 768; }
+
+function showMobileNav(){
+  const nav = document.getElementById('mobile-nav');
+  if(nav) nav.style.display = isMobile() ? 'flex' : 'none';
+}
+
+function toggleMobileMore(){
+  const menu = document.getElementById('mobile-more-menu');
+  const overlay = document.getElementById('mobile-more-overlay');
+  const open = menu.style.display === 'none';
+  menu.style.display = open ? 'block' : 'none';
+  overlay.style.display = open ? 'block' : 'none';
+  document.getElementById('mnav-more').classList.toggle('active', open);
+}
+
+window.addEventListener('resize', showMobileNav);
+
 function save(key,val){ localStorage.setItem(key,JSON.stringify(val)); }
 function saveProducts()  { save(KEY_PRODUCTS,products);  saveToCloud(); }
 function saveCategories(){ save(KEY_CATS,categories);     saveToCloud(); }
@@ -699,6 +830,7 @@ function checkSession(){
 }
 
 function initApp(){
+  showMobileNav();
   renderCatTabs(); renderCatChips(); renderMulticatList();
   updateReorderBadge(); renderDashboard();
 }
@@ -710,6 +842,13 @@ function switchTab(t){
   document.querySelectorAll('.topbar-tab').forEach((b,i)=>b.classList.toggle('active',TABS[i]===t));
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+t));
   document.getElementById('fab').style.display = t==='inventory'?'flex':'none';
+  // Update mobile nav
+  ['dashboard','reorder','inventory','overhead'].forEach(name=>{
+    const btn = document.getElementById('mnav-'+name);
+    if(btn) btn.classList.toggle('active', name===t);
+  });
+  const moreBtn = document.getElementById('mnav-more');
+  if(moreBtn) moreBtn.classList.toggle('active', t==='reports'||t==='team');
   if(t==='dashboard') renderDashboard();
   else if(t==='reorder') renderReorder();
   else if(t==='inventory'){ renderCatChips(); renderCatTabs(); renderInventory(); }
@@ -717,12 +856,17 @@ function switchTab(t){
   else if(t==='reports')  renderReports();
   else if(t==='team')     renderTeam();
   if(formOpen) closeForm();
+  // Scroll to top on tab change
+  window.scrollTo(0,0);
 }
 
 function updateReorderBadge(){
   const n=products.filter(p=>p.qty<=p.reorder).length;
   const b=document.getElementById('reorder-badge');
   b.textContent=n; b.style.display=n>0?'inline-flex':'none';
+  // Mobile badge
+  const mb=document.getElementById('mobile-reorder-badge');
+  if(mb){ mb.textContent=n; mb.classList.toggle('show',n>0); }
 }
 
 // ══════════════════════════════════════════════════════
