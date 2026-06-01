@@ -1074,6 +1074,9 @@ document.getElementById('f-resale').addEventListener('input',updateMarginPreview
 function toggleForm(){ formOpen?closeForm():openForm(); }
 function openForm(){
   formOpen=true;
+  document.body.style.overflow='hidden';
+  const nav=document.getElementById('mobile-nav');
+  if(nav) nav.style.transform='translateY(100%)';
   document.getElementById('fab').classList.add('open');
   document.getElementById('form-overlay').classList.add('open');
   document.getElementById('form-panel').classList.add('open');
@@ -1082,6 +1085,9 @@ function openForm(){
 }
 function openFormForEdit(){
   formOpen=true;
+  document.body.style.overflow='hidden';
+  const nav=document.getElementById('mobile-nav');
+  if(nav) nav.style.transform='translateY(100%)';
   document.getElementById('fab').classList.add('open');
   document.getElementById('form-overlay').classList.add('open');
   document.getElementById('form-panel').classList.add('open');
@@ -1089,6 +1095,9 @@ function openFormForEdit(){
 }
 function closeForm(){
   formOpen=false;
+  document.body.style.overflow='';
+  const nav=document.getElementById('mobile-nav');
+  if(nav) nav.style.transform='translateY(0)';
   document.getElementById('fab').classList.remove('open');
   document.getElementById('form-overlay').classList.remove('open');
   document.getElementById('form-panel').classList.remove('open');
