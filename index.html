@@ -792,11 +792,11 @@ function doLogin(){
   const errEl = document.getElementById('login-error');
   if(pw === getPassword()){
     errEl.classList.remove('show');
-    localStorage.setItem(KEY_SESSION,'active');
+    sessionStorage.setItem(KEY_SESSION,'active');
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('fab').style.display='flex';
-    loadFromCloud(); // loads latest data then calls initApp()
+    loadFromCloud();
   } else {
     errEl.classList.add('show');
     document.getElementById('login-pw').value='';
@@ -805,7 +805,7 @@ function doLogin(){
 }
 
 function doSignOut(){
-  localStorage.removeItem(KEY_SESSION);
+  sessionStorage.removeItem(KEY_SESSION);
   document.getElementById('app').style.display='none';
   document.getElementById('fab').style.display='none';
   document.getElementById('login-screen').style.display='flex';
@@ -1631,11 +1631,11 @@ function renderDashboard(){
 //  INIT
 // ══════════════════════════════════════════════════════
 function checkSession(){
-  if(localStorage.getItem(KEY_SESSION)==='active'){
+  if(sessionStorage.getItem(KEY_SESSION)==='active'){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('fab').style.display='flex';
-    loadFromCloud(); // loads latest data then calls initApp()
+    loadFromCloud();
   }
 }
 checkSession();
