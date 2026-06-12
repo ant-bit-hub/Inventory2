@@ -56,7 +56,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .signout-btn{padding:5px 12px;background:none;border:1px solid var(--border-md);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-muted);cursor:pointer;transition:all .15s}
 .signout-btn:hover{background:var(--red-bg);border-color:var(--red);color:var(--red)}
-
+6
 .main{max-width:1140px;margin:0 auto;padding:1.75rem 1.5rem 6rem}
 .page{display:none}.page.active{display:block}
 
@@ -233,7 +233,7 @@ a:hover{text-decoration:underline}
 .autofill-list.open{display:block}
 .autofill-item{padding:8px 12px;font-size:13px;cursor:pointer;transition:background .1s}
 .autofill-item:hover,.autofill-item.active{background:var(--accent-bg);color:var(--accent)}
-/* ── SORT/GROUP PILLS ── */
+/* ── SORT PILLS ── */
 .filter-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .filter-pill{padding:5px 12px;border-radius:20px;border:1px solid var(--border-md);background:none;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .15s}
 .filter-pill:hover{background:var(--surface2);color:var(--text)}
@@ -351,7 +351,7 @@ a:hover{text-decoration:underline}
     <div class="login-form">
       <div class="form-group">
         <label>Password</label>
-        <input id="login-pw" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+        <input id="login-pw" type="password" placeholder="" onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <div class="login-error" id="login-error">Incorrect password. Please try again.</div>
       <button class="login-btn" onclick="doLogin()">Unlock inventory</button>
@@ -385,7 +385,7 @@ a:hover{text-decoration:underline}
     <button class="topbar-tab"         onclick="switchTab('inventory')">Inventory</button>
     <button class="topbar-tab"         onclick="switchTab('overhead')">Overhead</button>
     <button class="topbar-tab"         onclick="switchTab('reports')">Reports</button>
-    <button class="topbar-tab"         onclick="switchTab('team')">👥 Team</button>
+    <button class="topbar-tab"         onclick="switchTab('settings')">Settings</button>
   </div>
   <div class="topbar-right">
     <span id="sync-badge" style="font-size:11px;color:var(--text-muted);opacity:.4;transition:opacity .3s,color .3s;white-space:nowrap">☁️ Cloud</span>
@@ -452,7 +452,7 @@ a:hover{text-decoration:underline}
     <div style="display:flex;align-items:center;overflow-x:auto">
       <div class="inner-tabs" id="inv-cat-tabs" style="border-bottom:none;margin-bottom:0;flex:1"></div>
     </div>
-    <div class="filter-pills" id="inv-sort-pills">
+    <div class="filter-pills">
       <span style="font-size:11px;color:var(--text-muted);font-weight:500;align-self:center;margin-right:2px">Sort &amp; group:</span>
       <button class="filter-pill active" id="pill-default" onclick="setInvSort('default')">Default</button>
       <button class="filter-pill" id="pill-az" onclick="setInvSort('az')">A → Z</button>
@@ -587,7 +587,7 @@ a:hover{text-decoration:underline}
         <div class="form-group"><label>Product name *</label><input id="f-name" placeholder="e.g. Vitamin C Serum"></div>
         <div class="form-group">
           <label>Brand</label>
-          <div class="autofill-wrap" id="brand-autofill-wrap">
+          <div class="autofill-wrap">
             <input id="f-brand" placeholder="e.g. SkinCeuticals" autocomplete="off" oninput="onBrandInput()" onkeydown="onBrandKeydown(event)" onblur="setTimeout(hideBrandList,150)">
             <div class="autofill-list" id="brand-autofill-list"></div>
           </div>
@@ -1043,15 +1043,15 @@ function filteredProducts(){
   return list;
 }
 
+// ── FEATURE 1: SORT ──
 function sortedFilteredProducts(){
-  let list = filteredProducts();
+  const list=filteredProducts();
   if(invSort==='az')    return [...list].sort((a,b)=>a.name.localeCompare(b.name));
   if(invSort==='za')    return [...list].sort((a,b)=>b.name.localeCompare(a.name));
   if(invSort==='low')   return [...list].sort((a,b)=>urgencyPct(b)-urgencyPct(a));
   if(invSort==='brand') return [...list].sort((a,b)=>(a.brand||'').localeCompare(b.brand||'')||a.name.localeCompare(b.name));
   return list;
 }
-
 function setInvSort(s){
   invSort=s;
   ['default','az','za','brand','low'].forEach(id=>{
@@ -1061,7 +1061,7 @@ function setInvSort(s){
   renderInventory();
 }
 
-// ── BRAND AUTOFILL ──
+// ── FEATURE 2: BRAND AUTOCOMPLETE ──
 function getBrands(){
   return [...new Set(products.map(p=>p.brand).filter(Boolean))].sort();
 }
@@ -1103,7 +1103,7 @@ function onBrandKeydown(e){
   }
 }
 
-// ── REORDER BRAND FILTER ──
+// ── FEATURE 3: REORDER BRAND FILTER ──
 function onReorderFilterChange(){
   const val=document.getElementById('reorder-filter').value;
   const brandSel=document.getElementById('reorder-brand-filter');
@@ -1298,9 +1298,9 @@ function sellOne(id){
 //  RENDER INVENTORY
 // ══════════════════════════════════════════════════════
 function renderInventory(){
-  const list = sortedFilteredProducts();
-  const el = document.getElementById('inv-table');
-  document.getElementById('inv-count').textContent =
+  const list=sortedFilteredProducts();
+  const el=document.getElementById('inv-table');
+  document.getElementById('inv-count').textContent=
     invSearch||invCatFilter!=='all'?`(${list.length} of ${products.length})`:`(${products.length})`;
   if(!list.length){
     el.innerHTML=`<div class="empty"><div class="empty-icon">📦</div>${invSearch?'No products match your search.':'No products yet — tap the ＋ button to add your first one.'}</div>`;
@@ -1409,8 +1409,7 @@ function getFilteredReorder(){
   if(f==='low') l=l.filter(p=>p.qty>0&&p.qty<=p.reorder);
   if(f==='brand'){
     const brandSel=document.getElementById('reorder-brand-filter');
-    const selectedBrand=brandSel?brandSel.value:'';
-    if(selectedBrand) l=l.filter(p=>p.brand===selectedBrand);
+    if(brandSel&&brandSel.value) l=l.filter(p=>p.brand===brandSel.value);
   }
   return l.sort((a,b)=>urgencyPct(b)-urgencyPct(a));
 }
