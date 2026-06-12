@@ -56,7 +56,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);fon
 .topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .signout-btn{padding:5px 12px;background:none;border:1px solid var(--border-md);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-muted);cursor:pointer;transition:all .15s}
 .signout-btn:hover{background:var(--red-bg);border-color:var(--red);color:var(--red)}
-6
+
 .main{max-width:1140px;margin:0 auto;padding:1.75rem 1.5rem 6rem}
 .page{display:none}.page.active{display:block}
 
@@ -227,6 +227,20 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
 
+/* ── BRAND AUTOFILL ── */
+.autofill-wrap{position:relative}
+.autofill-list{display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border-md);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:400;max-height:180px;overflow-y:auto;margin-top:2px}
+.autofill-list.open{display:block}
+.autofill-item{padding:8px 12px;font-size:13px;cursor:pointer;transition:background .1s}
+.autofill-item:hover,.autofill-item.active{background:var(--accent-bg);color:var(--accent)}
+/* ── SORT/GROUP PILLS ── */
+.filter-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.filter-pill{padding:5px 12px;border-radius:20px;border:1px solid var(--border-md);background:none;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.filter-pill:hover{background:var(--surface2);color:var(--text)}
+.filter-pill.active{background:var(--text);color:#fff;border-color:var(--text)}
+/* ── BRAND GROUP HEADER ── */
+.brand-group-header td{background:var(--surface2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);padding:8px 10px;border-top:2px solid var(--border-md)}
+
 @media(max-width:800px){
   .metrics,.quarter-grid{grid-template-columns:1fr 1fr}
   .grid-2{grid-template-columns:1fr}
@@ -337,7 +351,7 @@ a:hover{text-decoration:underline}
     <div class="login-form">
       <div class="form-group">
         <label>Password</label>
-        <input id="login-pw" type="password" placeholder="" onkeydown="if(event.key==='Enter')doLogin()">
+        <input id="login-pw" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <div class="login-error" id="login-error">Incorrect password. Please try again.</div>
       <button class="login-btn" onclick="doLogin()">Unlock inventory</button>
@@ -371,7 +385,7 @@ a:hover{text-decoration:underline}
     <button class="topbar-tab"         onclick="switchTab('inventory')">Inventory</button>
     <button class="topbar-tab"         onclick="switchTab('overhead')">Overhead</button>
     <button class="topbar-tab"         onclick="switchTab('reports')">Reports</button>
-    <button class="topbar-tab"         onclick="switchTab('settings')">Settings</button>
+    <button class="topbar-tab"         onclick="switchTab('team')">👥 Team</button>
   </div>
   <div class="topbar-right">
     <span id="sync-badge" style="font-size:11px;color:var(--text-muted);opacity:.4;transition:opacity .3s,color .3s;white-space:nowrap">☁️ Cloud</span>
@@ -401,11 +415,13 @@ a:hover{text-decoration:underline}
         <button class="view-btn active" id="vbtn-cards" onclick="setReorderView('cards')">⊞ Cards</button>
         <button class="view-btn" id="vbtn-list" onclick="setReorderView('list')">≡ List</button>
       </div>
-      <select id="reorder-filter" onchange="renderReorder()" style="width:auto;font-size:12px;padding:6px 10px">
+      <select id="reorder-filter" onchange="onReorderFilterChange()" style="width:auto;font-size:12px;padding:6px 10px">
         <option value="all">All needing reorder</option>
         <option value="out">Out of stock only</option>
         <option value="low">Low stock only</option>
+        <option value="brand">Filter by brand…</option>
       </select>
+      <select id="reorder-brand-filter" onchange="renderReorder()" style="width:auto;font-size:12px;padding:6px 10px;display:none"></select>
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn-sm" onclick="copyReorderList()">📋 Copy list</button>
@@ -435,6 +451,14 @@ a:hover{text-decoration:underline}
     </div>
     <div style="display:flex;align-items:center;overflow-x:auto">
       <div class="inner-tabs" id="inv-cat-tabs" style="border-bottom:none;margin-bottom:0;flex:1"></div>
+    </div>
+    <div class="filter-pills" id="inv-sort-pills">
+      <span style="font-size:11px;color:var(--text-muted);font-weight:500;align-self:center;margin-right:2px">Sort &amp; group:</span>
+      <button class="filter-pill active" id="pill-default" onclick="setInvSort('default')">Default</button>
+      <button class="filter-pill" id="pill-az" onclick="setInvSort('az')">A → Z</button>
+      <button class="filter-pill" id="pill-za" onclick="setInvSort('za')">Z → A</button>
+      <button class="filter-pill" id="pill-brand" onclick="setInvSort('brand')">Group by brand</button>
+      <button class="filter-pill" id="pill-low" onclick="setInvSort('low')">Low stock first</button>
     </div>
   </div>
   <div class="card">
@@ -561,7 +585,13 @@ a:hover{text-decoration:underline}
       <div class="form-section-title">Product details</div>
       <div class="form-grid">
         <div class="form-group"><label>Product name *</label><input id="f-name" placeholder="e.g. Vitamin C Serum"></div>
-        <div class="form-group"><label>Brand</label><input id="f-brand" placeholder="e.g. SkinCeuticals"></div>
+        <div class="form-group">
+          <label>Brand</label>
+          <div class="autofill-wrap" id="brand-autofill-wrap">
+            <input id="f-brand" placeholder="e.g. SkinCeuticals" autocomplete="off" oninput="onBrandInput()" onkeydown="onBrandKeydown(event)" onblur="setTimeout(hideBrandList,150)">
+            <div class="autofill-list" id="brand-autofill-list"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="form-section">
@@ -722,6 +752,7 @@ let invCatFilter = 'all';
 let invSearch    = '';
 let activeYear   = reportYears[0]||2026;
 let selectedCats = [];
+let invSort      = 'default';
 
 const TABS = ['dashboard','reorder','inventory','overhead','reports','team'];
 
@@ -1012,6 +1043,82 @@ function filteredProducts(){
   return list;
 }
 
+function sortedFilteredProducts(){
+  let list = filteredProducts();
+  if(invSort==='az')    return [...list].sort((a,b)=>a.name.localeCompare(b.name));
+  if(invSort==='za')    return [...list].sort((a,b)=>b.name.localeCompare(a.name));
+  if(invSort==='low')   return [...list].sort((a,b)=>urgencyPct(b)-urgencyPct(a));
+  if(invSort==='brand') return [...list].sort((a,b)=>(a.brand||'').localeCompare(b.brand||'')||a.name.localeCompare(b.name));
+  return list;
+}
+
+function setInvSort(s){
+  invSort=s;
+  ['default','az','za','brand','low'].forEach(id=>{
+    const el=document.getElementById('pill-'+id);
+    if(el) el.classList.toggle('active',id===s);
+  });
+  renderInventory();
+}
+
+// ── BRAND AUTOFILL ──
+function getBrands(){
+  return [...new Set(products.map(p=>p.brand).filter(Boolean))].sort();
+}
+function onBrandInput(){
+  const val=document.getElementById('f-brand').value.trim().toLowerCase();
+  const list=document.getElementById('brand-autofill-list');
+  if(!val){ list.classList.remove('open'); return; }
+  const matches=getBrands().filter(b=>b.toLowerCase().includes(val));
+  if(!matches.length){ list.classList.remove('open'); return; }
+  list.innerHTML=matches.map(b=>`<div class="autofill-item" onmousedown="selectBrand('${escHtml(b)}')">${escHtml(b)}</div>`).join('');
+  list.classList.add('open');
+}
+function selectBrand(brand){
+  document.getElementById('f-brand').value=brand;
+  hideBrandList();
+}
+function hideBrandList(){
+  const list=document.getElementById('brand-autofill-list');
+  if(list) list.classList.remove('open');
+}
+function onBrandKeydown(e){
+  const list=document.getElementById('brand-autofill-list');
+  const items=list.querySelectorAll('.autofill-item');
+  const active=list.querySelector('.autofill-item.active');
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    const next=active?active.nextElementSibling:items[0];
+    if(active) active.classList.remove('active');
+    if(next){ next.classList.add('active'); document.getElementById('f-brand').value=next.textContent; }
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    const prev=active?active.previousElementSibling:items[items.length-1];
+    if(active) active.classList.remove('active');
+    if(prev){ prev.classList.add('active'); document.getElementById('f-brand').value=prev.textContent; }
+  } else if(e.key==='Enter'&&active){
+    e.preventDefault(); selectBrand(active.textContent);
+  } else if(e.key==='Escape'){
+    hideBrandList();
+  }
+}
+
+// ── REORDER BRAND FILTER ──
+function onReorderFilterChange(){
+  const val=document.getElementById('reorder-filter').value;
+  const brandSel=document.getElementById('reorder-brand-filter');
+  if(val==='brand'){
+    const brands=[...new Set(products.filter(p=>p.qty<=p.reorder).map(p=>p.brand).filter(Boolean))].sort();
+    brandSel.innerHTML=brands.length
+      ? brands.map(b=>`<option value="${escHtml(b)}">${escHtml(b)}</option>`).join('')
+      : '<option value="">No brands need reorder</option>';
+    brandSel.style.display='inline-block';
+  } else {
+    brandSel.style.display='none';
+  }
+  renderReorder();
+}
+
 // ══════════════════════════════════════════════════════
 //  PHOTO
 // ══════════════════════════════════════════════════════
@@ -1191,19 +1298,20 @@ function sellOne(id){
 //  RENDER INVENTORY
 // ══════════════════════════════════════════════════════
 function renderInventory(){
-  const list=filteredProducts();
-  const el=document.getElementById('inv-table');
-  document.getElementById('inv-count').textContent=
+  const list = sortedFilteredProducts();
+  const el = document.getElementById('inv-table');
+  document.getElementById('inv-count').textContent =
     invSearch||invCatFilter!=='all'?`(${list.length} of ${products.length})`:`(${products.length})`;
   if(!list.length){
     el.innerHTML=`<div class="empty"><div class="empty-icon">📦</div>${invSearch?'No products match your search.':'No products yet — tap the ＋ button to add your first one.'}</div>`;
     return;
   }
-  el.innerHTML=`<table><thead><tr>
+  const header=`<thead><tr>
     <th></th><th>Name</th><th>Brand</th><th>Categories</th>
     <th>Wholesale</th><th>Resale</th><th>Margin</th>
     <th>Qty</th><th>Sell</th><th>Reorder</th><th>Sold/mo</th><th>Status</th><th></th>
-  </tr></thead><tbody>${list.map(p=>{
+  </tr></thead>`;
+  function productRow(p){
     const pct=p.reorder>0?Math.min(100,Math.round((p.qty/Math.max(p.reorder*2,1))*100)):100;
     const mgn=marginPct(p);
     const row=p.qty===0?'danger-strip':p.qty<=p.reorder?'alert-strip':'';
@@ -1225,7 +1333,20 @@ function renderInventory(){
         <button class="btn-del" onclick="deleteProduct(${p.id})">✕</button>
       </td>
     </tr>`;
-  }).join('')}</tbody></table>`;
+  }
+  if(invSort==='brand'){
+    const groups={};
+    list.forEach(p=>{ const key=p.brand||'(No brand)'; if(!groups[key]) groups[key]=[]; groups[key].push(p); });
+    let rows='';
+    Object.keys(groups).sort((a,b)=>a.localeCompare(b)).forEach(brand=>{
+      rows+=`<tr class="brand-group-header"><td colspan="13">🏷️ ${escHtml(brand)} <span style="font-weight:400;opacity:.6">(${groups[brand].length} product${groups[brand].length!==1?'s':''})</span></td></tr>`;
+      rows+=groups[brand].map(productRow).join('');
+    });
+    el.innerHTML=`<table>${header}<tbody>${rows}</tbody></table>`;
+  } else {
+    el.innerHTML=`<table>${header}<tbody>${list.map(productRow).join('')}</tbody></table>`;
+  }
+}
 }
 
 // ══════════════════════════════════════════════════════
@@ -1286,6 +1407,11 @@ function getFilteredReorder(){
   let l=products.filter(p=>p.qty<=p.reorder);
   if(f==='out') l=l.filter(p=>p.qty===0);
   if(f==='low') l=l.filter(p=>p.qty>0&&p.qty<=p.reorder);
+  if(f==='brand'){
+    const brandSel=document.getElementById('reorder-brand-filter');
+    const selectedBrand=brandSel?brandSel.value:'';
+    if(selectedBrand) l=l.filter(p=>p.brand===selectedBrand);
+  }
   return l.sort((a,b)=>urgencyPct(b)-urgencyPct(a));
 }
 function renderReorder(){
