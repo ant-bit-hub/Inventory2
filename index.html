@@ -881,17 +881,6 @@ function doChangePwFromApp(){
   showToast('✓ Password updated successfully');
 }
 
-// Check if already logged in on page load
-function checkSession(){
-  localStorage.removeItem(KEY_SESSION);
-  if(sessionStorage.getItem(KEY_SESSION)==='active'){
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('app').style.display='block';
-    document.getElementById('fab').style.display='flex';
-    initApp();
-  }
-}
-
 function initApp(){
   showMobileNav();
   renderCatTabs(); renderCatChips(); renderMulticatList();
@@ -1346,7 +1335,6 @@ function renderInventory(){
   } else {
     el.innerHTML=`<table>${header}<tbody>${list.map(productRow).join('')}</tbody></table>`;
   }
-}
 }
 
 // ══════════════════════════════════════════════════════
