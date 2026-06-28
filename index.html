@@ -238,8 +238,8 @@ a:hover{text-decoration:underline}
 .filter-pill{padding:5px 12px;border-radius:20px;border:1px solid var(--border-md);background:none;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .15s}
 .filter-pill:hover{background:var(--surface2);color:var(--text)}
 .filter-pill.active{background:var(--text);color:#fff;border-color:var(--text)}
-/* ── BRAND GROUP HEADER ── */
-.brand-group-header td{background:var(--surface2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);padding:8px 10px;border-top:2px solid var(--border-md)}
+.badge-single{background:#f2ecfb;color:#6b3fa0;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+.badge-single::before{content:'';width:5px;height:5px;border-radius:50%;background:#6b3fa0}
 
 @media(max-width:800px){
   .metrics,.quarter-grid{grid-template-columns:1fr 1fr}
@@ -610,6 +610,13 @@ a:hover{text-decoration:underline}
         <div class="form-group"><label>Reorder below (qty)</label><input id="f-reorder" type="number" min="0" placeholder="5"></div>
         <div class="form-group"><label>Units sold this month</label><input id="f-sold" type="number" min="0" placeholder="0"></div>
       </div>
+      <div style="margin-top:12px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text);font-weight:500">
+          <input type="checkbox" id="f-single-stock" onchange="toggleSingleStock()" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer">
+          Single stock item — only alert when fully out of stock
+        </label>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;margin-left:26px">When checked, reorder threshold is set to 0. You'll only be notified when qty hits 0.</div>
+      </div>
     </div>
     <div class="form-section">
       <div class="form-section-title">Categories (select one or more)</div>
@@ -927,6 +934,7 @@ function updateReorderBadge(){
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function statusBadge(p){
   if(p.qty===0) return '<span class="badge badge-out">Out of stock</span>';
+  if(p.singleStock) return '<span class="badge-single">Single stock</span>';
   if(p.qty<=p.reorder) return '<span class="badge badge-low">Low stock</span>';
   return '<span class="badge badge-ok">In stock</span>';
 }
@@ -1048,6 +1056,21 @@ function setInvSort(s){
     if(el) el.classList.toggle('active',id===s);
   });
   renderInventory();
+}
+
+// ── SINGLE STOCK TOGGLE ──
+function toggleSingleStock(){
+  const checked=document.getElementById('f-single-stock').checked;
+  const reorderInput=document.getElementById('f-reorder');
+  if(checked){
+    reorderInput.value=0;
+    reorderInput.disabled=true;
+    reorderInput.style.opacity='.4';
+  } else {
+    reorderInput.disabled=false;
+    reorderInput.style.opacity='1';
+    if(parseInt(reorderInput.value)===0) reorderInput.value=5;
+  }
 }
 
 // ── FEATURE 2: BRAND AUTOCOMPLETE ──
@@ -1204,6 +1227,10 @@ function clearForm(){
   document.getElementById('form-panel-title').textContent='Add a product';
   document.getElementById('form-error').textContent='';
   document.getElementById('margin-preview').textContent='';
+  // Reset single stock
+  document.getElementById('f-single-stock').checked=false;
+  document.getElementById('f-reorder').disabled=false;
+  document.getElementById('f-reorder').style.opacity='1';
   selectedCats=[]; renderMulticatList(); clearPhoto(null);
 }
 
@@ -1225,7 +1252,8 @@ function saveProduct(){
     id:editId||Date.now(), name,
     wholesale:ws, resale:rs, price:pr, qty,
     brand:    document.getElementById('f-brand').value.trim(),
-    reorder:  parseInt(document.getElementById('f-reorder').value)||5,
+    reorder:  parseInt(document.getElementById('f-reorder').value)||0,
+    singleStock: document.getElementById('f-single-stock').checked,
     categories:[...selectedCats],
     sold:     parseInt(document.getElementById('f-sold').value)||0,
     link:     document.getElementById('f-link').value.trim(),
@@ -1249,6 +1277,12 @@ function editProduct(id){
   document.getElementById('f-reorder').value =p.reorder;
   document.getElementById('f-sold').value    =p.sold;
   document.getElementById('f-link').value    =p.link||'';
+  // Single stock toggle
+  const singleCb = document.getElementById('f-single-stock');
+  singleCb.checked = p.singleStock||false;
+  const reorderInput = document.getElementById('f-reorder');
+  reorderInput.disabled = p.singleStock||false;
+  reorderInput.style.opacity = p.singleStock ? '.4' : '1';
   selectedCats=[...(p.categories||[])];
   loadPhotoPreview(p.photo||'');
   document.getElementById('btn-label').textContent        ='💾 Save changes';
