@@ -739,15 +739,23 @@ async function loadFromCloud(){
           localStorage.setItem(key,JSON.stringify(val));
         });
       }
+      // Migrate orderQty BEFORE saving or rendering
+      let changed=false;
+      products.forEach(p=>{
+        if(p.orderQty===undefined||p.orderQty===null){
+          p.orderQty=p.reorder||0;
+          changed=true;
+        }
+      });
       save(KEY_PRODUCTS,products); save(KEY_CATS,categories);
       save(KEY_YEARS,reportYears); save(KEY_TEAM,teamMembers);
-      // Migrate orderQty on cloud data and push back if needed
-      let cloudNeedsMigration=false;
-      products.forEach(p=>{
-        if(!p.orderQty && p.reorder){ p.orderQty=p.reorder; cloudNeedsMigration=true; }
-      });
-      if(cloudNeedsMigration) saveToCloud();
-      showSyncBadge('✓ Loaded from cloud','var(--green)');
+      // If migration happened push to cloud immediately (no debounce)
+      if(changed){
+        await forceSaveToCloud();
+        showSyncBadge('✓ Migrated & saved to cloud','var(--green)');
+      } else {
+        showSyncBadge('✓ Loaded from cloud','var(--green)');
+      }
     } else {
       showSyncBadge('☁️ No cloud data yet','var(--text-muted)');
     }
@@ -756,6 +764,26 @@ async function loadFromCloud(){
     showSyncBadge('⚠️ Using local data','var(--amber)');
   }
   initApp();
+}
+
+// Immediate save with no debounce
+async function forceSaveToCloud(){
+  const payload=JSON.stringify({
+    version:2, savedAt:new Date().toISOString(),
+    products, categories, reportYears, teamMembers,
+    quarterlyData:getQuarterlyData(),
+  });
+  const boundary='-------waves_boundary';
+  const metadata=JSON.stringify({name:DRIVE_FILE_NAME,parents:['appDataFolder']});
+  const body=
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n`+
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${payload}\r\n`+
+    `--${boundary}--`;
+  try{
+    await fetch(SCRIPT_URL,{method:'POST',body:payload});
+  } catch(e){
+    console.error('Force save failed',e);
+  }
 }
 
 let products    = JSON.parse(localStorage.getItem(KEY_PRODUCTS) || '[]');
@@ -1596,20 +1624,21 @@ function importData(event){
   };
   reader.readAsText(file);
 }
-function fixAllOrderQty(){
+async function fixAllOrderQty(){
   let fixed=0;
   products.forEach(p=>{
-    if(!p.orderQty && p.reorder){ p.orderQty=p.reorder; fixed++; }
-    else if(!p.orderQty){ p.orderQty=0; }
+    const prev=p.orderQty;
+    p.orderQty=p.reorder||0;
+    if(p.orderQty!==prev) fixed++;
   });
-  saveProducts();
+  save(KEY_PRODUCTS,products);
+  await forceSaveToCloud();
   const msg=document.getElementById('fix-msg');
   if(msg){
     msg.style.color='var(--green)';
-    msg.textContent=`✓ Fixed ${fixed} product${fixed!==1?'s':''} — syncing to cloud…`;
-    setTimeout(()=>{ msg.textContent='✓ Done! Reload the page to see changes.'; },3000);
+    msg.textContent=`✓ Fixed ${fixed} product${fixed!==1?'s':''} — saved to cloud. Reload now.`;
   }
-  showToast(`✓ Fixed ${fixed} products — syncing to cloud`,'var(--green)');
+  showToast(`✓ Fixed & saved to cloud — reload the page`,'var(--green)');
 }
 
 function renderTeam(){
