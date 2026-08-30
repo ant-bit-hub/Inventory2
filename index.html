@@ -525,6 +525,12 @@ a:hover{text-decoration:underline}
     </div>
     <div id="backup-msg" style="margin-top:12px;font-size:13px;display:none"></div>
   </div>
+  <div class="card" style="border-color:var(--amber);background:var(--amber-bg)">
+    <div class="card-title" style="color:var(--amber)">🔧 Fix reorder qty on all products</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">If reorder qty is showing — in the reorder tab, tap this to migrate all existing products and push the fix to cloud.</p>
+    <button class="btn-primary" style="background:var(--amber)" onclick="fixAllOrderQty()">🔧 Fix all products now</button>
+    <div id="fix-msg" style="margin-top:10px;font-size:13px"></div>
+  </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;flex-wrap:wrap">
       <div class="form-group"><label>Current password</label><input id="tp-current" type="password" placeholder="Current password"></div>
       <div class="form-group"><label>New password</label><input id="tp-new" type="password" placeholder="New password"></div>
@@ -1589,6 +1595,22 @@ function importData(event){
   };
   reader.readAsText(file);
 }
+function fixAllOrderQty(){
+  let fixed=0;
+  products.forEach(p=>{
+    if(!p.orderQty && p.reorder){ p.orderQty=p.reorder; fixed++; }
+    else if(!p.orderQty){ p.orderQty=0; }
+  });
+  saveProducts();
+  const msg=document.getElementById('fix-msg');
+  if(msg){
+    msg.style.color='var(--green)';
+    msg.textContent=`✓ Fixed ${fixed} product${fixed!==1?'s':''} — syncing to cloud…`;
+    setTimeout(()=>{ msg.textContent='✓ Done! Reload the page to see changes.'; },3000);
+  }
+  showToast(`✓ Fixed ${fixed} products — syncing to cloud`,'var(--green)');
+}
+
 function renderTeam(){
   const el=document.getElementById('team-list-wrap');
   if(!teamMembers.length){
