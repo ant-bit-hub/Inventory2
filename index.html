@@ -773,12 +773,6 @@ async function forceSaveToCloud(){
     products, categories, reportYears, teamMembers,
     quarterlyData:getQuarterlyData(),
   });
-  const boundary='-------waves_boundary';
-  const metadata=JSON.stringify({name:DRIVE_FILE_NAME,parents:['appDataFolder']});
-  const body=
-    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n`+
-    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${payload}\r\n`+
-    `--${boundary}--`;
   try{
     await fetch(SCRIPT_URL,{method:'POST',body:payload});
   } catch(e){
@@ -1508,7 +1502,7 @@ function renderReorder(){
         <div class="rc-top">${thumbHtml(p)}<div class="rc-info"><div class="rc-name">${escHtml(p.name)}</div><div class="rc-brand">${escHtml(p.brand||'')}</div></div>${statusBadge(p)}</div>
         <div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px"><span>Urgency</span><span style="color:${uc};font-weight:600">${u}%</span></div><div class="urgency-bar"><div class="urgency-fill" style="width:${u}%;background:${uc}"></div></div></div>
         <div class="rc-row"><span class="rc-row-label">In stock</span><span class="rc-row-val">${p.qty}</span></div>
-        <div class="rc-row"><span class="rc-row-label">Reorder qty</span><span class="rc-row-val" style="color:var(--accent)">${p.orderQty?p.orderQty+' units':'—'}</span></div>
+        <div class="rc-row"><span class="rc-row-label">Reorder qty</span><span class="rc-row-val" style="color:var(--accent)">${p.orderQty!=null&&p.orderQty!==''?p.orderQty+' units':'—'}</span></div>
         <div class="rc-row"><span class="rc-row-label">Wholesale/unit</span><span class="rc-row-val">${p.wholesale?fmt(p.wholesale):'—'}</span></div>
         <div class="rc-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:2px"><span class="rc-row-label" style="font-weight:600">Est. restock cost</span><span class="rc-row-val" style="font-size:15px">${fmt(restockCost(p))}</span></div>
         <div class="rc-actions">${p.link?`<a href="${escHtml(p.link)}" target="_blank" class="btn-sm-accent" style="text-decoration:none">🛒 Order now</a>`:''}<button class="btn-sm" onclick="quickEditQty(${p.id})">✏️ Update qty</button></div>
@@ -1520,7 +1514,7 @@ function renderReorder(){
         return `<tr class="${p.qty===0?'danger-strip':'alert-strip'}">
           <td>${thumbHtml(p)}</td><td><strong>${escHtml(p.name)}</strong></td>
           <td>${statusBadge(p)}</td><td><strong>${p.qty}</strong></td>
-          <td style="color:var(--accent);font-weight:600">${p.orderQty||'—'}</td>
+          <td style="color:var(--accent);font-weight:600">${p.orderQty!=null&&p.orderQty!==''?p.orderQty:'—'}</td>
           <td>${p.wholesale?fmt(p.wholesale):'—'}</td>
           <td style="font-family:'DM Mono',monospace">${fmt(restockCost(p))}</td>
           <td><div class="urgency-wrap" style="min-width:80px"><div class="urgency-bar"><div class="urgency-fill" style="width:${u}%;background:${uc}"></div></div><span style="font-size:11px;font-weight:600;color:${uc}">${u}%</span></div></td>
@@ -1539,7 +1533,7 @@ function quickEditQty(id){
 function copyReorderList(){
   const list=getFilteredReorder(); if(!list.length){alert('No products to copy.');return;}
   const lines=['REORDER LIST — '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}),'─'.repeat(48),
-    ...list.map(p=>`• ${p.name}${p.brand?' ('+p.brand+')':''}  |  In stock: ${p.qty}  |  Reorder qty: ${p.orderQty||'—'} units  |  ~${fmt(restockCost(p))}${p.link?'\n  Link: '+p.link:''}`),
+    ...list.map(p=>`• ${p.name}${p.brand?' ('+p.brand+')':''}  |  In stock: ${p.qty}  |  Reorder qty: ${p.orderQty!=null&&p.orderQty!==''?p.orderQty:'—'} units  |  ~${fmt(restockCost(p))}${p.link?'\n  Link: '+p.link:''}`),
     '─'.repeat(48),`TOTAL: ${fmt(list.reduce((s,p)=>s+restockCost(p),0))}`];
   navigator.clipboard.writeText(lines.join('\n')).then(()=>showToast('✅ Copied!')).catch(()=>alert('Copy failed.'));
 }
@@ -1816,7 +1810,7 @@ function renderDashboard(){
     rEl.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Product</th><th>In stock</th><th>Reorder at</th><th>Reorder qty</th><th>Status</th><th></th></tr></thead><tbody>${
       needReorder.sort((a,b)=>urgencyPct(b)-urgencyPct(a)).map(p=>`<tr class="${p.qty===0?'danger-strip':'alert-strip'}">
         <td><strong>${escHtml(p.name)}</strong></td><td><strong>${p.qty}</strong></td><td>${p.reorder}</td>
-        <td style="color:var(--accent);font-weight:600">${p.orderQty||'—'} units</td>
+        <td style="color:var(--accent);font-weight:600">${p.orderQty!=null&&p.orderQty!==''?p.orderQty:'—'} units</td>
         <td>${statusBadge(p)}</td>
         <td>${p.link?`<a href="${escHtml(p.link)}" target="_blank" style="font-size:12px">Order →</a>`:'—'}</td>
       </tr>`).join('')
