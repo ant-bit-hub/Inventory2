@@ -746,6 +746,9 @@ async function loadFromCloud(){
           p.orderQty=p.reorder||0;
           changed=true;
         }
+        // Recalculate reorder threshold as 20% of orderQty
+        const correct=Math.ceil((p.orderQty||0)*0.20);
+        if(p.reorder!==correct){ p.reorder=correct; changed=true; }
       });
       save(KEY_PRODUCTS,products); save(KEY_CATS,categories);
       save(KEY_YEARS,reportYears); save(KEY_TEAM,teamMembers);
@@ -1294,8 +1297,8 @@ function saveProduct(){
     id:editId||Date.now(), name,
     wholesale:ws, resale:rs, price:pr, qty,
     brand:    document.getElementById('f-brand').value.trim(),
-    reorder:  parseInt(document.getElementById('f-reorder').value)||0,
     orderQty: parseInt(document.getElementById('f-reorder').value)||0,
+    reorder:  Math.ceil((parseInt(document.getElementById('f-reorder').value)||0)*0.20),
     singleStock: document.getElementById('f-single-stock').checked,
     categories:[...selectedCats],
     sold:     parseInt(document.getElementById('f-sold').value)||0,
@@ -1622,7 +1625,8 @@ async function fixAllOrderQty(){
   let fixed=0;
   products.forEach(p=>{
     const prev=p.orderQty;
-    p.orderQty=p.reorder||0;
+    if(!p.orderQty) p.orderQty=p.reorder||0;
+    p.reorder=Math.ceil((p.orderQty||0)*0.20);
     if(p.orderQty!==prev) fixed++;
   });
   save(KEY_PRODUCTS,products);
